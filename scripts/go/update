@@ -1,0 +1,8 @@
+#!/bin/sh
+
+set -e
+
+deps=$(go list -tags tools -m -f '{{if not (or .Indirect .Main)}}{{.Path}}{{end}}' all)
+go get -d -u "${deps}"
+go mod download
+go mod tidy
