@@ -1,0 +1,87 @@
+---
+image_pull_secrets:
+- docker_config_json
+kind: pipeline
+name: build
+steps:
+- commands:
+  - echo $DRONE_RUNNER_NAME
+  depends_on: []
+  image: alpine
+  name: runner identification
+- commands:
+  - make deps
+  - ./scripts/enforce-clean
+  depends_on:
+  - runner identification
+  image: golang:1.19
+  name: deps
+- commands:
+  - make lint
+  depends_on:
+  - deps
+  image: golang:1.19
+  name: lint
+- commands:
+  - make test
+  depends_on:
+  - deps
+  image: golang:1.19
+  name: test
+- commands:
+  - make build
+  depends_on:
+  - lint
+  - test
+  image: golang:1.19
+  name: build
+trigger:
+  ref:
+  - refs/heads/main
+  - refs/pull/**
+type: docker
+volumes:
+- host:
+    path: /var/run/docker.sock
+  name: docker
+- name: config
+  temp: {}
+---
+image_pull_secrets:
+- docker_config_json
+kind: pipeline
+name: release
+steps:
+- commands:
+  - echo $DRONE_RUNNER_NAME
+  depends_on: []
+  image: alpine
+  name: runner identification
+trigger:
+  ref:
+  - refs/tags/v*.*.*
+type: docker
+volumes:
+- host:
+    path: /var/run/docker.sock
+  name: docker
+- name: config
+  temp: {}
+---
+get:
+  name: service-account
+  path: infra/data/ci/gcr-admin
+kind: secret
+name: gcr_sa
+---
+get:
+  name: .dockerconfigjson
+  path: secret/data/common/gcr
+kind: secret
+name: docker_config_json
+---
+get:
+  name: token
+  path: infra/data/ci/argo-workflows/trigger-service-account
+kind: secret
+name: argo_token

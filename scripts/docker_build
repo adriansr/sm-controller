@@ -1,0 +1,15 @@
+#!/bin/sh
+
+GO_VERSION=1.19
+GOCACHE=$(go env GOCACHE)
+GOPKGCACHE=$(readlink -m "$(go env GOMODCACHE)"/..)
+
+docker container run \
+	-ti \
+	--rm \
+	--user "$(id -u)":"$(id -g)" \
+	--volume "${PWD}":/workdir \
+	--volume "${GOCACHE}":/.cache/go-build \
+	--volume "${GOPKGCACHE}":/go/pkg \
+	"golang:${GO_VERSION}" \
+	make -C /workdir "$@"
