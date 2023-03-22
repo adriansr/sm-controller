@@ -117,5 +117,17 @@ func (opts *CheckOptions) checkForHostPort(svc *coreV1.Service, host string, por
 		// TODO: Ignorable error for logging
 		return nil, nil
 	}
+
+	switch {
+	case opts.Target != "":
+		check.Target = opts.Target
+
+	case opts.Host != "":
+		host = opts.Host
+		fallthrough
+	default:
+		check.Target = fmt.Sprintf("%s:%d", host, port.Port)
+	}
+
 	return check, nil
 }

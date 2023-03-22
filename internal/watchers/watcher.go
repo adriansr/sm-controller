@@ -29,9 +29,9 @@ func (s ResourceMetaSetter) OnDelete(obj schema.Object) error {
 	return nil
 }
 
-type List []Watcher
+type Chain []Watcher
 
-func (s List) OnAdd(obj schema.Object) error {
+func (s Chain) OnAdd(obj schema.Object) error {
 	for _, h := range s {
 		if err := h.OnAdd(obj); err != nil {
 			return err
@@ -40,7 +40,7 @@ func (s List) OnAdd(obj schema.Object) error {
 	return nil
 }
 
-func (s List) OnUpdate(oldObj, newObj schema.Object) error {
+func (s Chain) OnUpdate(oldObj, newObj schema.Object) error {
 	for _, h := range s {
 		if err := h.OnUpdate(oldObj, newObj); err != nil {
 			break
@@ -49,7 +49,7 @@ func (s List) OnUpdate(oldObj, newObj schema.Object) error {
 	return nil
 }
 
-func (s List) OnDelete(obj schema.Object) error {
+func (s Chain) OnDelete(obj schema.Object) error {
 	for _, h := range s {
 		if err := h.OnDelete(obj); err != nil {
 			break

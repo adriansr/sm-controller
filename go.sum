@@ -74,6 +74,8 @@ github.com/google/gofuzz v1.1.0/go.mod h1:dBl0BpW6vV/+mYPU4Po3pmUjxk6FQPldtuIdl/
 github.com/google/uuid v1.3.0 h1:t6JiXgmwXMjEs8VusXIJk2BXHsn+wx8BZdTaoZ5fu7I=
 github.com/grafana/synthetic-monitoring-agent v0.14.3 h1:M7HZmTJKJLF53Fv7KZeb2KyzHSx7gbHiJ3Mr/ApfCRA=
 github.com/grafana/synthetic-monitoring-agent v0.14.3/go.mod h1:izjAJZb+Q+/GZogJ8Nls6HQlmIUaHUfCtinPCU3HhSw=
+github.com/grafana/synthetic-monitoring-api-go-client v0.7.0 h1:3ZfQzmXDBPcQTTgMAIIiTw5Dwxm/B4lzf34Sto0d0YY=
+github.com/grafana/synthetic-monitoring-api-go-client v0.7.0/go.mod h1:ET64tbp14yq3U8X97/IO/KbG+FqU5Z8DigWrzGUHX40=
 github.com/imdario/mergo v0.3.6 h1:xTNEAn+kxVO7dTZGu0CegyqKZmoWFI0rF8UxjlB2d28=
 github.com/imdario/mergo v0.3.6/go.mod h1:2EnlNZ0deacrJVfApfmtdGgDfMuh/nq6Ok1EcJh5FfA=
 github.com/josharian/intern v1.0.0 h1:vlS4z54oSdjm0bgjRigI+G1HpF+tI+9rE5LLzOg8HmY=

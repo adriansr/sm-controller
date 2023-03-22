@@ -39,6 +39,8 @@ type options struct {
 	httpListenAddr string
 	master         string
 	kubeConfigPath string
+	apiServer      string
+	apiToken       string
 }
 
 func (o *options) newFlagSetWithDefaults(name string) *flag.FlagSet {
@@ -51,6 +53,8 @@ func (o *options) newFlagSetWithDefaults(name string) *flag.FlagSet {
 	// k8s.io library refers to --master and --kubeconfig in some errors. Use the same names.
 	fs.StringVar(&o.master, "master", "", "TODO")
 	fs.StringVar(&o.kubeConfigPath, "kubeconfig", "", "path to kube config file")
+	fs.StringVar(&o.apiServer, "server", "", "Synthetic-monitoring API server URL")
+	fs.StringVar(&o.apiToken, "token", "", "Synthetic-monitoring API token")
 
 	return fs
 }
@@ -115,7 +119,7 @@ func run(output io.Writer, args []string) (finalErr error) {
 	})
 
 	g.Go(func() error {
-		return runController(ctx, &zl, options.kubeConfigPath)
+		return runController(ctx, &zl, options.kubeConfigPath, options.apiServer, options.apiToken)
 	})
 
 	// you need to call readinessHandler.Set(true) when the application is ready
@@ -132,6 +136,7 @@ func main() {
 	output := os.Stderr
 	gin.SetMode(gin.ReleaseMode)
 	if err := run(output, os.Args); err != nil {
+		fmt.Fprintf(output, "Error: %s\n", err.Error())
 		var err2 errWithCode
 		if errors.As(err, &err2) {
 			os.Exit(err2.Code())
@@ -175,6 +180,14 @@ func processFlags(fs *flag.FlagSet, options *options, args []string) (stop bool,
 
 	if options.debug {
 		options.verbose = true
+	}
+
+	if options.apiServer == "" {
+		return false, errors.New("must specify a synthetic-monitoring API server (--server argument)")
+	}
+
+	if options.apiToken == "" {
+		return false, errors.New("must specify a synthetic-monitoring API token (--token argument)")
 	}
 
 	return false, nil
@@ -249,7 +262,7 @@ type runner interface {
 	Run(l net.Listener) error
 }
 
-func runController(ctx context.Context, zl *zerolog.Logger, cfgPath string) error {
+func runController(ctx context.Context, zl *zerolog.Logger, cfgPath, apiServer, apiToken string) error {
 	// This should automatically fallback to in-cluster config discovery without changes.
 	config, err := clientcmd.BuildConfigFromFlags("", cfgPath)
 	if err != nil {
@@ -296,7 +309,7 @@ func runController(ctx context.Context, zl *zerolog.Logger, cfgPath string) erro
 	C := make(chan watchers.Event, 1)
 
 	err = iIngress.AddWatcher(
-		watchers.List{
+		watchers.Chain{
 			watchers.TypeAssert[*networkingV1.Ingress]{},
 			watchers.ResourceMetaSetter(ingressRsrc),
 			watchers.Logger{Logger: &ingressLogger, Level: zerolog.DebugLevel},
@@ -329,7 +342,7 @@ func runController(ctx context.Context, zl *zerolog.Logger, cfgPath string) erro
 	}
 
 	err = iService.AddWatcher(
-		watchers.List{
+		watchers.Chain{
 			watchers.TypeAssert[*coreV1.Service]{},
 			watchers.ResourceMetaSetter(serviceRsrc),
 			watchers.Filter(hasSMAnnotation),
@@ -352,7 +365,10 @@ func runController(ctx context.Context, zl *zerolog.Logger, cfgPath string) erro
 		C:      C,
 		Logger: zl.With().Str("component", "cluster-state").Logger(),
 		Publisher: &state.Consolidator{
-			Logger: &pLogger,
+			Logger:         &pLogger,
+			ApiServer:      apiServer,
+			ApiToken:       apiToken,
+			RequestTimeout: time.Second * 30,
 		},
 	}
 	st.Run(ctx)

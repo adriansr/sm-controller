@@ -45,7 +45,8 @@ type CheckOptions struct {
 	Probes    []string
 
 	// These are modifiers:
-	Host string
+	Host   string
+	Target string
 }
 
 func (opt *Options) NewCheckOptions(annotations map[string]string) (opts CheckOptions) {
