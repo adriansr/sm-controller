@@ -25,8 +25,9 @@ var defaultCheckOptions = CheckOptions{
 
 type Options struct {
 	// TODO: Config options for how the checks are built
-
-	defaults CheckOptions
+	ClusterName string
+	Labels      []sm.Label
+	defaults    CheckOptions
 }
 
 func NewOptions() Options {

@@ -14,6 +14,7 @@ type k8sObject interface {
 	GetNamespace() string
 	GetName() string
 	GetAnnotations() map[string]string
+	Marshal() ([]byte, error)
 }
 
 type Object interface {

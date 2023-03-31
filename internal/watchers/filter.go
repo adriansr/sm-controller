@@ -32,3 +32,20 @@ func (f Filter) OnDelete(obj schema.Object) error {
 	}
 	return nil
 }
+
+type UpdateFilter func(oldObj schema.Object, newObj schema.Object) bool
+
+func (f UpdateFilter) OnAdd(obj schema.Object) error {
+	return nil
+}
+
+func (f UpdateFilter) OnUpdate(oldObj, newObj schema.Object) error {
+	if !(f(oldObj, newObj)) {
+		return ErrSkipEvent
+	}
+	return nil
+}
+
+func (f UpdateFilter) OnDelete(obj schema.Object) error {
+	return nil
+}

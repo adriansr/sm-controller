@@ -11,6 +11,8 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"reflect"
+	"strings"
 	"syscall"
 	"time"
 
@@ -308,10 +310,15 @@ func runController(ctx context.Context, zl *zerolog.Logger, cfgPath, apiServer, 
 
 	C := make(chan watchers.Event, 1)
 
+	filterUpdateNochanges := func(oldObj schema.Object, newObj schema.Object) bool {
+		return smAnnotationsChanged(oldObj, newObj) || specChanged(oldObj, newObj)
+	}
+
 	err = iIngress.AddWatcher(
 		watchers.Chain{
 			watchers.TypeAssert[*networkingV1.Ingress]{},
 			watchers.ResourceMetaSetter(ingressRsrc),
+			watchers.UpdateFilter(filterUpdateNochanges),
 			watchers.Logger{Logger: &ingressLogger, Level: zerolog.DebugLevel},
 			watchers.Publisher{
 				C:   C,
@@ -345,6 +352,7 @@ func runController(ctx context.Context, zl *zerolog.Logger, cfgPath, apiServer, 
 		watchers.Chain{
 			watchers.TypeAssert[*coreV1.Service]{},
 			watchers.ResourceMetaSetter(serviceRsrc),
+			watchers.UpdateFilter(filterUpdateNochanges),
 			watchers.Filter(hasSMAnnotation),
 			watchers.Logger{Logger: &svcLogger, Level: zerolog.DebugLevel},
 			watchers.Publisher{
@@ -373,4 +381,57 @@ func runController(ctx context.Context, zl *zerolog.Logger, cfgPath, apiServer, 
 	}
 	st.Run(ctx)
 	return nil
+}
+
+func extractSMAnnotations(a map[string]string) map[string]string {
+	out := make(map[string]string)
+	for k, v := range a {
+		if strings.HasPrefix(k, builder.AnnotationsPrefix) {
+			out[k] = v
+		}
+	}
+	return out
+}
+
+func mapsEqual(a, b map[string]string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for k, vA := range a {
+		vB, found := b[k]
+		if !found {
+			return false
+		}
+		if vA != vB {
+			return false
+		}
+	}
+	return true
+}
+
+func smAnnotationsChanged(old, new schema.Object) bool {
+	var (
+		oldAnn = extractSMAnnotations(old.GetAnnotations())
+		newAnn = extractSMAnnotations(new.GetAnnotations())
+	)
+	return !mapsEqual(oldAnn, newAnn)
+}
+
+type ServiceOrIngress interface {
+	*coreV1.Service | *networkingV1.Ingress
+}
+
+func getSpec(obj schema.Object) interface{} {
+	switch v := obj.Inner().(type) {
+	case *coreV1.Service:
+		return v.Spec
+	case *networkingV1.Ingress:
+		return v.Spec
+	default:
+		panic(fmt.Errorf("unexpected %T", v))
+	}
+}
+
+func specChanged(old, new schema.Object) bool {
+	return !reflect.DeepEqual(getSpec(old), getSpec(new))
 }
